@@ -22,3 +22,4 @@ and creates the hosts file that will be used by Ansible as inventory. When the t
 
 1. Make possible to configure more than one master
 2. Create tags for executing some specific tasks, like add more nodes.
+3. Add tests
