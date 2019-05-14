@@ -12,7 +12,7 @@ resource "null_resource" "ansible" {
   }
 
   provisioner "local-exec" {
-    command = "echo  [all:vars] >> hosts && echo ansible_user=diegocananea >> hosts && echo ansible_ssh_common_args='-o StrictHostKeyChecking=no' >> hosts"
+    command = "echo  [all:vars] >> hosts && echo ansible_user=${var.user} >> hosts && echo ansible_ssh_common_args='-o StrictHostKeyChecking=no' >> hosts"
   }
  provisioner "local-exec" {
     command = "ansible-playbook -i hosts kubernetes.yml"
