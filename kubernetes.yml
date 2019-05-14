@@ -1,0 +1,16 @@
+---
+
+- hosts: master
+  become: yes
+
+  roles:
+    - common
+    - master
+
+
+- hosts: nodes
+  become: yes
+
+  roles:
+    - common
+    - nodes

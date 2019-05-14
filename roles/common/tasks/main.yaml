@@ -1,0 +1,65 @@
+---
+
+- name: Removing docker packages provided for the distro
+  yum:
+    name: ['docker', 'docker-client', 'docker-client-latest', 'docker-common', 'docker-latest', 'docker-latest-logrotate', 'docker-logrotate','docker-engine-selinux', 'docker-engine']
+    state: absent
+
+- name: Add Docker-CE official repository
+  yum_repository:
+    name: docker-ce-stable
+    description: Docker-CE Repo
+    baseurl: https://download.docker.com/linux/centos/$releasever/$basearch/stable
+    gpgcheck: yes
+    gpgkey: https://download.docker.com/linux/fedora/gpg
+
+- name: Install Docker, git and others packages
+  yum:
+    name: ['docker-ce', 'docker-ce-cli', 'containerd.io', 'git', "bash-completion"]
+    state: present
+
+- name: Start Docker daemon
+  systemd:
+    name: docker
+    state: started
+    enabled: yes
+
+- name: Add Kubernetes official repository
+  yum_repository:
+    name: kubernetes
+    description: Kubernetes Repo
+    baseurl: http://yum.kubernetes.io/repos/kubernetes-el7-x86_64
+    gpgcheck: yes
+    gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg
+- name: Install Kubernetes components [kubelet, kubectl, kubeadm]
+  yum:
+    name: ['kubelet', 'kubectl', 'kubeadm']
+    state: present
+
+- name: Start Kubelet daemon
+  systemd:
+    name: kubelet
+    state: started
+    enabled: yes
+
+- name: Configure bash-completion for kubectl
+  shell: echo "source <(kubectl completion bash)" >> /home/{{ansible_user}}/.bashrc
+
+- name: example copying file with owner and permissions
+  copy:
+    src: daemon.json
+    dest: /etc/docker/daemon.json
+
+- name: Creating /etc/systemd/system/docker.service.d directory
+  file:
+    path: /etc/systemd/system/docker.service.d
+    state: directory
+
+- name: Reloading the systemd daemon
+  systemd:
+    daemon_reload: yes
+
+- name: Restart Docker daemon
+  systemd:
+    name: docker
+    state: restarted

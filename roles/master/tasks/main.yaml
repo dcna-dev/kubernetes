@@ -1,0 +1,80 @@
+---
+
+- name: Executing kubeadm config images pull
+  shell: kubeadm config images pull
+
+- name: Initializing the Kubernetes' master
+  shell: kubeadm init
+  ignore_errors: yes
+
+- name: Creating the nodes' join command
+  shell: /usr/bin/kubeadm token create --print-join-command
+  register: kubeadm_join
+
+- name: "Add K8S Token and Hash to dummy host"
+  add_host:
+    name:   "KUBEADM_DUMMY"
+    kubeadm_join: "{{ kubeadm_join.stdout }}"
+
+- name: Create .kube folder in user's home
+  file:
+    path: "{{ ansible_env.HOME }}/.kube/"
+    recurse: yes
+    state: directory
+
+- name: Creating the /etc/kubectl directory
+  file:
+    name: /etc/kubectl
+    state: directory
+
+- name: Copying kube admin.config to user's home
+  copy:
+    src: /etc/kubernetes/admin.conf
+    dest: "{{ ansible_env.HOME }}/.kube/config"
+    remote_src: yes
+    owner: "{{ ansible_user }}"
+    group: "{{ ansible_user }}"
+
+- name: Install Weave network plugin
+  shell: kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+
+- name: Ensure that kubernetes-helm directory exists
+  file:
+    path: "{{ ansible_env.HOME }}/kubernetes-helm"
+    state: directory
+
+- name: Downloading Helm binaries
+  unarchive:
+    src: https://storage.googleapis.com/kubernetes-helm/helm-v2.13.1-linux-amd64.tar.gz
+    dest: "{{ ansible_env.HOME }}/kubernetes-helm"
+    remote_src: yes
+
+- name: Installing Helm
+  copy:
+    src: "{{ ansible_env.HOME }}/kubernetes-helm/linux-amd64/helm"
+    dest: /usr/sbin
+    remote_src: yes
+    mode: +x
+
+- name: Installing Tiller
+  copy:
+    src: "{{ ansible_env.HOME }}/kubernetes-helm/linux-amd64/tiller"
+    dest: /usr/sbin
+    remote_src: yes
+    mode: +x
+
+- name: Initializing helm
+  shell: helm init
+
+- name: Creating service account for tiller
+  shell: kubectl create serviceaccount --namespace=kube-system tiller
+  ignore_errors: yes
+
+- name: Creating Cluster Role Binding for tiller
+  shell: kubectl create clusterrolebinding tiller-cluster-role --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+  ignore_errors: yes
+
+- name: Applying a patch for tiller service account
+  shell: kubectl patch deployments -n kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'
+  ignore_errors: yes
+

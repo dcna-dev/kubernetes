@@ -1,0 +1,5 @@
+---
+
+- name: Executing kubeadm join command to join the cluster
+  command: "{{ hostvars['KUBEADM_DUMMY']['kubeadm_join'] }}"
+
